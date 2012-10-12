@@ -61,45 +61,78 @@ Now the tricky thing about this was that the implict service call would be _queu
 
 Sean's thinking behind this functionality was that controller methods that just called a service and rendered a view could be eliminated - note that the service would still be called even if there was no default.cfc main function.
 
-However this was a frequent source of confusion, and so starting with version 2 of the framework implicit service calls were disabled by default and it was recommended to access services via a bean factory / dependency injection framework.
+However this was a frequent source of confusion, and so starting with version 2 of the framework implicit service calls were disabled by default and it was recommended to access services via a bean factory / dependency injection framework explicitly from a controller method - sometimes too much convention can be detrimental!
 
-So what's a DI framework do? At it's most basic level it separates dependencies between your compoennts from the components themselves - this means that say your controller requires a LoginService - rather than doing a "variables.loginService = createObject("component", "services.LoginService").init()" you just declare a "loginService" property and have handling the setting of that property on your controller by your DI framework.
+So what's a DI framework do? At it's most basic level it separates dependencies between your compoennts from the components themselves - this means that say your controller requires a LoginService - rather than doing a "variables.loginService = createObject("component", "services.LoginService").init()" you just declare a "loginService" property and have handling the setting of that property on your controller with an appropriate component be handled by your DI framework.
 
 The advantages of this are many:
 * you don't have to handle the lifetime of your services
 * complex inter-dependencies between compoenents can be handled and resolved by the DI framework
-* it makes testing easier because you can easily swap out the implementation of a component
+* it makes it easy to swap out one component providing the same API for another
 
 So how does FW/1 use a DI framework?
 
-In your onApplicationStart() method you set variables.beanFactory to your beanFactory of choice.  Essentially any component that responds to a "getBean" (TODO fact check) method can be used as a Bean Factory.
+The core of any DI framework is called a Bean Factory - it provides objects in response to queries for a named object - so a call to beanFactory.getBean("loginService") would return whatever component, or bean, had been defined as "loginService" in the bean factory's configuration.
 
-Probably the most well known DI framework for CF is Coldspring, now maintained by CFOANZs own Mark Mandel. The Coldspring API is based on the Spring framework from Java land. Coldspring is generally configured via an XML file, and instanciating a Coldspring bean factory looks something like this:
+In FW/1, in your onApplicationStart() method, you give FW/1 access to a bean factory by setting variables.beanFactory to your beanFactory of choice.  Essentially any component that responds to a "getBean" (TODO fact check) method can be used as a Bean Factory.
+
+Before I cover Coldspring, which is the de-facto and most well known Coldfusion DI framework I'll talk briefly about DI/1. DI/1 was created by Sean Corfield (creator of FW/1) and shares a lot of the same philosophies in terms of convention over configuration. In it's default configuration it assumes everything in a directory called "model" is a bean, you can use sub-directories to help separate your beans.
+
+So model/testService.cfc would be "testService" in the Bean Factory and model/ldap/loginService.cfc would be "ldapLoginService" to the Bean Factory.
+
+DI/1 does what is called auto-wiring - this means that it will search for properties and constructor arguments on your beans that match the names of components known to the bean factory and will INJECT those beans.
+
+So let's say I have an component called personService.cfc. This component relies on a component called personDAO.cfc to perform database access. Without a DI factory if we wanted to use personService we would need code like the following:
+
+createObject("component", "model.personService").init();
+
+.. this assumes that personService had a constructor that did something like:
+variables.personDAO = createObject("component", "model.personDAO").init();
+
+If we wanted to pass in the DAO when creating the service we would need to do:
+
+personDAO = createObject("component", "model.personDAO").init();
+createObject("component", "model.personService").init(personDAO);
+
+.. with a constructor like:
+
+... (required any personDAO) ...
+
+With DI we can just do beanFactory.getBean("personService") which will:
+- see that personService takes an instance personDAO as a constructor argument
+- create a new instance of personDAO
+- create a new instance of personService passing personDAO
+- return personService
+
+.. the other part of this is most of these kind of service beans are considered singletons - that means the bean factory will only ever instanciate one instance of each, so next time you ask the bean factory for personService you'll get back the previously created one.
+
+So just to show a basic example of using a bean factory with FW/1:
+
+[demo with a controller that has a personService property]
+
+DI/1 is nice and simple, and will probably be more than enough for most of your cases, however the most well known DI framework for CF is Coldspring, now maintained by CFOANZs own Mark Mandel. The Coldspring API is based on the Spring framework from Java land. Coldspring is generally configured via an XML file, and instanciating a Coldspring bean factory looks something like this:
 
 [ example ]
 
-So using the "LoginService" example, at it's most basic in the coldspring.xml file we map the id "LoginService" to our LoginService component.
+So using the "personService" example, at it's most basic in the coldspring.xml file we map the id "personService" to our personService component, we map "personDAO", and ensure we have autowire="true".
 
-However say our LoginService uses a LoginAuthenticator to actually handle verifying the username and password - we have a few Authenticators we use for our applications such as DatabaseAuthenticator and LDAPAuthenticator.  In the coldspring.xml we define these beans, and then pass the one we want into LoginService when it's constructed.
+This gives us equivalent functionality to what we did above with DI/1 with _no_ configration. However a common use case for DI is easily replacing the implementation of a component.  Let's say we have a personSQLDAO and a personStaticDAO - both with the same API.
+
+In the coldspring.xml we define these beans, and then pass the one we want into LoginService when it's constructed.
+
+We can actually do the same sort of thing with DI/1, but it requires a bit of configuration - we have to define an "alias" - so we alias personDAO to be the component that we want to use personSQLDAO or personStaticDAO. Still pretty simple.
+
+You can also create aliases for static constants - for example you could do [TODO add constant "ftpServer" = "127.0.0.1" and pass into an remoteFileService which takes ctor arg]
 
 Coldspring does a heck of a lot more than this - but that's beyond the scope of this talk. Check out the docs for the full set of features.
 
-OK, so how do we get access to our LoginService in our FW/1 controller? Well by simply creating a property called "loginService" and ensuring that "accessors=true" is set for your component. When your controller is instanciated by FW/1 any properties will be checked against beans registered with the bean factory and automatically wired.
+While FW/1 does autowiring into controllers of components from the bean factory you can also use the bean factory for getting the controllers themselves [TODO how does it do the search?]
 
-So now if you want to switch from verifying your usernames and passwords from LDAP to the Database all you need to do is change the ref in the coldspring.xml file and refresh your application. No code changes required!
-
-You can actually also use the DI support in FW/1 to instanciate your controllers themselves - prior to looking for a cfc in the controllers folder it will ask the bean factory for a "defaultSection" bean. If this exists it will be used as the controller.  You could use this if, say, you just had a LDAPLoginService and DatabaseLoginService and wanted to configure which one got used in your coldspring.xml
-
-I also previously mentioned that Sean Corfield created a simple DI framework called DI/1. DI/1 follows the same principles as FW/1 - it's extremely lightweight and uses convention over configuration and might be all you need if you don't need some of the more advanced features in something like Coldspring.
-
-[4 min]
-
-[TODO flesh out basic DI/1 intro / demo after trying it!]
 
 Routes
 ------
 
-The canonical URL format to access a FW/1 action is index.cfm?action=section.method, however FW/1 supports a number of ways to provide cleaner URLs, the first of these is the ability to take advantage of the PATH_INFO CGI variable to accept URLs like index.cfm/action/section.
+The canonical URL format to access a FW/1 action is index.cfm?action=section.method, however FW/1 supports a number of ways to provide cleaner URLs, the first of these is the ability to take advantage of the PATH_INFO CGI variable to accept URLs like index.cfm/action/section. As a part of this you can actually also pass the parameters into the path rather than using the query string - eg. index.cfm/action/section/id/5 is equivalent to index.cfm/action/section?id=5
 
 As long as you have setup the appropriate rewrite rules on your web server you can also eliminate the index.cfm part of the URL using the omitIndex (?) config option.
 
@@ -115,9 +148,9 @@ which means you can now go to index.cfm/home
 
 or you can use parameters such as:
 
-/person/:id => people.person?id=:id
+/person/:id => people.person/id/:id
 
-which means you can go to an URL like /index.cfm/person/1
+which means you can go to an URL like /index.cfm/person/1 (note that with route mappings you can't output a query string)
 
 Routes are processed in order from the start to the end of the route array, and processing is stopped on the first match.
 
@@ -139,7 +172,18 @@ The other caveat with those routes is they require a patch that's not in the cur
 
 Just a quick caveat with routes - in the current release version of FW/1 the routes are only simple matches, so /person/:id will match /person/1 and also /person/1/contacts - you can't get around this by doing /person/:id/contacts and /person/:id second - however in the latest HEAD version on Github there's some basic support for some additional regex support in routes like /person/:id$
 
-OK, so once your FW/1 applications start to get a little larger you might want to break them up into smaller components - either because you want to more easily re-use them in other applications, or they're aimed at different audiences - like say an admin system vs a public site. FW/1 allows you to do this with support for something called sub-systems.
+So now we've talked about how you can provide model service to your application, and how you can use friendly URLs and also create "RESTful" service with FW/1 routes let's talk about 
+breaking applications into re-useable components.
+
+Recently I saw Ray Camden show how easy it is with CF10 REST services to return different representations depending on what was asked for. You can also do this quite easily with FW/1 routes:
+
+[show demo with returning different data types]
+
+.. now in this example I've based what gets returned on the extension requested, however you could just as easily use the "Accepts" header.
+
+[demo of accepts?]
+
+You might want to break up your application either because you want to more easily re-use parts in other applications or just that they're logically different parts of a whole - like say an admin system vs a public site. FW/1 allows you to do this with support for something called sub-systems.
 
 To turn on sub-systems in your application you need to add a config option variables.framework.usingSubsystems = true
 
@@ -170,13 +214,11 @@ So that's our tour of some of the more advanced features of FW/1 - by using all 
 
 One last thing I'd like to discuss is testing of FW/1 applications.
 
-If you've done everything mostly right in terms of structuring your application to keep it loosely coupled then it will better lend itself to testing.
+If you've done everything mostly right in terms of structuring your application to keep it loosely coupled then it will better lend itself to testing. You can tests your services in isolation, your controllers in isolation, and your views in isolation. Writing tests early is a good way to weed out these so called tight coupling - if you find something is hard to test because it has some external dependencies then it's probably a good candidate for further splitting up.
 
 The "standard" testing framework in the Coldfusion world is mxunit, so that's what I'll be using today.
 
-Now this something I recently had an aha! moment with after asking what in retrospect was a silly question on the FW/1 mailing list - when testing it's important to consider that you're testing YOUR code and not the Framework. This means that your tests should not have any dependencies on the framework being there or running, and any calls made to framework functions like populate or redirect should be stubbed and mocked.
-
-So at it's most basic to test a controller method you setup the request context with the required variables, call your controller function, and then inspect rc to assert that the values in rc are now what you expect them to be.
+Staring with the controller - it's important to remember when testing your controllers that you're not testing the framework, so you should be able to just use your standalone controller component to test. You setup the request context with the required variables, call your controller function, and then inspect rc to assert that the values in rc are now what you expect them to be.
 
 However if your controller calls a service to get data, then these service calls should be mocked and the mock service injected into your controller.
 
@@ -190,24 +232,8 @@ You can then either do simple string matching to ensure that the data you expect
 
 [Example]
 
-OK, so where are we at? We've shown how FW/1 adds structure and separation to your application with it's implementation of Model-View-Controller. We've shown how you can use dependency injection to reduce coupling between components. We've talked about sub-systems and how they can be used to break an application into re-useable modules. We've covered routes which allow you to make "friendly" URLs and provide consistent APIs. And last but not least we've covered a little on testing FW/1 applications.
+OK, so after that whirlwind tour where are we at? We've shown how FW/1 can be used to add structure and separation to your application with it's implementation of the Model-View-Controller pattern. We've shown how you can use dependency injection to reduce coupling between components. We've covered routes which allow you to make "friendly" URLs and provide consistent APIs. We've talked about sub-systems and how they can be used to break an application into re-useable modules. And last but not least we've covered a little on testing FW/1 applications.
 
-I'll use some of the remaining time to show you a few useful tricks and tips you can do with FW/1 that didn't directly fit into the above.
-
-
-Small tips
-* producing JSON using onMissingMethod (TODO: move?)
-    * REST stuff with returning diff data types
-* populate
-* authorization with before
-
-
-
-Testing
-* mxunit
-* Testing Controllers
-* Testing Views (Functional - HTML matching?)
-* demo
 
 Resources
 * Github
