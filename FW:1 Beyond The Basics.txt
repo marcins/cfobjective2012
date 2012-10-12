@@ -1,0 +1,215 @@
+Adding Structure to ColdFusion Applications with FW/1: Beyond the Basics
+
+Good morning, my name's Marcin Szczepanski and today I'm going to be talking to you about adding some structure to Coldfusion applications, specifically using FW/1. I'll be covering some more of the "advanced" features, for want of a better word, but essentially just showing you some of the features available in the framework that you might not be aware of or have used.
+
+First a bit about my background. I work for webqem, a digital agency based in Sydney, as a "developer" - essentially covering everything from backend to frontend. I've been developing with Coldfusion for almost 6 years, basically from around the CFMX/CF7 days, but have been involved with the web professionally since 1999.
+
+I started using FW/1 about two years ago (TODO: Fact Check), as it seemed to be a nice change from some of the "heavier" CF frameworks out there like FuseBox, ColdBox, etc.
+
+What attracted me to this framework was it's simplicity - it's a single CFC that you drop into your application, and have your App.cfc extend. It favours convention over configuration, so you need to do very little in order to get a simple app up and running using the framework.
+
+The reason this presentation includes the phrase "adding structure to Coldfusion Applications" is because I believe that CF often gets a bad rap for the same sort of reasons PHP does - the mixing of code and presentation, and is seen as spaghetti code. However as with PHP there's no reason you can't write well organised CF applications, and I think FW/1 is a great way to add this structure without a huge amount of overhead.
+
+So what I'm going to cover in today's presentation is:
+* a quick background and refresher on FW/1 and the basics, but not in any huge detail
+* we'll dive into how FW/1 works with dependency injection frameworks like Sean Corfield's own DI/1 or more commonly Coldspring
+* We'll cover sub-systems and how you can use them to break up your application into re-useable logical units
+* We'll talk about FW/1 routes and how they can be used to provide "pretty" URLs and REST style APIs
+* And lastly we'll touch on some ideas for how you can test the various components of your FW/1 applications
+
+So a quick FW/1 intro and refresher - we'll keep this fairly brief as this presentation isn't meant to be about the basics.
+
+FW/1 comprises of a single CFC, called framework.cfc. To use the framework you have your application.cfc extend framework.cfc.  FW/1 is designed to provide convention over configuration, this means that there's nothing to setup in application.cfc unless you want to override the defaults.
+
+A FW/1 application comprises of services, controllers, views and layouts  - these cover the 3 parts of the Model-View-Controller pattern.
+
+To access functions within an FW/1 application you use actions - at it's basic level an action comprises of a controller and method name - for example "default.main".
+
+With FW/1s convention over configuration approach this means that the framework looks for a controller called default.cfc in the folder "controllers", it then calls a function in this controller called "main". Having a controller is optional, and if it does exist then the view still gets rendered.
+
+With the default configuration a minimal FW/1 app contains a single view in views/default/main.cfm - it doesn't even need a controller.
+
+[Show example]
+
+So for the view part, each action has a corresponding view in "views/_controller_/_method_.cfm" - this is the required part of the setup, without a view there's nothing to render so the framework throws an error.
+
+So then going up another level a view can be rendered inside a layout - the default layout is in layouts/default.cfm - a layout needs output the contents of the "body" variable to include the output of views lower in the hierarchy.
+
+Layouts can be nested, so FW/1 will first check for a function specific layout in "layouts/controller/action.cfm", then a controller layout in "layouts/controller.cfm" and finally the default layout. These layouts can be nested by including the output of "body" each time, or nesting can be stopped by setting request.layout = false
+
+So back to the controller, assuming you actually want to do something more than rendeering static views, which you probably do, each function receives a "request context" structure in a variable called "rc". Your controller's job is to read any user supplied data out of rc, it is automatically populated with the content of any FORM and GET variables, and you set any new properties on rc that are then accessible by the view.
+
+[Quick DEMO? - 1 min]
+
+.. and in a nutshell that covers most of what FW/1 does at it's most basic level.
+
+Services & Dependency Injection
+-------------------------------
+
+So first let's talk about services and dependency injection.  I didn't cover services in the basics above, but services are what your controllers call on in order to perform the business logic required for your application to function.
+
+Prior to version 2 of FW/1 there were implicit service calls - this meant that for an action default.main the framework would look for a services/default.cfc - it would then call that CFCs "main" method, matching the names of any parameters to those found in the request context.
+
+So for example if you had a login(username, password) method in your default service, and you POSTed to the default.login action with a username/password form variable then the framework would automatically call the service method with the right values passed in.
+
+Now the tricky thing about this was that the implict service call would be _queued_ after your controller function finished. This meant that you didn't have access to the service results in your function, however there were some additional functions that FW/1 would call, if they existed, to make this easier to manage - namely beforeMethod and afterMethod - so for a request to default.main the main part of the call trace would look like this:
+
+* beforeMain
+* main
+* [service called here]
+* afterMain
+
+Sean's thinking behind this functionality was that controller methods that just called a service and rendered a view could be eliminated - note that the service would still be called even if there was no default.cfc main function.
+
+However this was a frequent source of confusion, and so starting with version 2 of the framework implicit service calls were disabled by default and it was recommended to access services via a bean factory / dependency injection framework.
+
+So what's a DI framework do? At it's most basic level it separates dependencies between your compoennts from the components themselves - this means that say your controller requires a LoginService - rather than doing a "variables.loginService = createObject("component", "services.LoginService").init()" you just declare a "loginService" property and have handling the setting of that property on your controller by your DI framework.
+
+The advantages of this are many:
+* you don't have to handle the lifetime of your services
+* complex inter-dependencies between compoenents can be handled and resolved by the DI framework
+* it makes testing easier because you can easily swap out the implementation of a component
+
+So how does FW/1 use a DI framework?
+
+In your onApplicationStart() method you set variables.beanFactory to your beanFactory of choice.  Essentially any component that responds to a "getBean" (TODO fact check) method can be used as a Bean Factory.
+
+Probably the most well known DI framework for CF is Coldspring, now maintained by CFOANZs own Mark Mandel. The Coldspring API is based on the Spring framework from Java land. Coldspring is generally configured via an XML file, and instanciating a Coldspring bean factory looks something like this:
+
+[ example ]
+
+So using the "LoginService" example, at it's most basic in the coldspring.xml file we map the id "LoginService" to our LoginService component.
+
+However say our LoginService uses a LoginAuthenticator to actually handle verifying the username and password - we have a few Authenticators we use for our applications such as DatabaseAuthenticator and LDAPAuthenticator.  In the coldspring.xml we define these beans, and then pass the one we want into LoginService when it's constructed.
+
+Coldspring does a heck of a lot more than this - but that's beyond the scope of this talk. Check out the docs for the full set of features.
+
+OK, so how do we get access to our LoginService in our FW/1 controller? Well by simply creating a property called "loginService" and ensuring that "accessors=true" is set for your component. When your controller is instanciated by FW/1 any properties will be checked against beans registered with the bean factory and automatically wired.
+
+So now if you want to switch from verifying your usernames and passwords from LDAP to the Database all you need to do is change the ref in the coldspring.xml file and refresh your application. No code changes required!
+
+You can actually also use the DI support in FW/1 to instanciate your controllers themselves - prior to looking for a cfc in the controllers folder it will ask the bean factory for a "defaultSection" bean. If this exists it will be used as the controller.  You could use this if, say, you just had a LDAPLoginService and DatabaseLoginService and wanted to configure which one got used in your coldspring.xml
+
+I also previously mentioned that Sean Corfield created a simple DI framework called DI/1. DI/1 follows the same principles as FW/1 - it's extremely lightweight and uses convention over configuration and might be all you need if you don't need some of the more advanced features in something like Coldspring.
+
+[4 min]
+
+[TODO flesh out basic DI/1 intro / demo after trying it!]
+
+Routes
+------
+
+The canonical URL format to access a FW/1 action is index.cfm?action=section.method, however FW/1 supports a number of ways to provide cleaner URLs, the first of these is the ability to take advantage of the PATH_INFO CGI variable to accept URLs like index.cfm/action/section.
+
+As long as you have setup the appropriate rewrite rules on your web server you can also eliminate the index.cfm part of the URL using the omitIndex (?) config option.
+
+Last of all FW/1 provides support for mapping of arbitrary URL patterns to actions using routes - this functionality is also known as "friendly" or "SES" URLs.
+
+Routes are purely a visual thing, they don't offer any additional functionality you don't already get through a standard "action" URL. Generally they're used for SEO, providing easily memoriseable URLs or providing a consistent API.
+
+Routes are defined in the FW/1 config file, and a simple route definition looks like this:
+
+/home => /main/default
+
+which means you can now go to index.cfm/home
+
+or you can use parameters such as:
+
+/person/:id => people.person?id=:id
+
+which means you can go to an URL like /index.cfm/person/1
+
+Routes are processed in order from the start to the end of the route array, and processing is stopped on the first match.
+
+You can further limit the scope of a route match by providing a method that this route applies to - for example $GET/person/:id will only match for a GET request but not a POST.
+
+What this means is with the right set of routes you can actually create a REST based API:
+
+[example of REST routes]
+
+There's a few routes required to provide the full set of capabilities for an object, but it's not too onerous. I'm actually planning to submit a patch for FW/1 that will let you simplify all that with:
+
+$RESOURCE/person
+
+However I haven't yet got around to writing that one, so you'll have to do it the long way for now!
+
+The other caveat with those routes is they require a patch that's not in the current "stable" release of FW/1, this patch adds support for doing your own custom regex matching in a route, rather than just simple placeholder matching.
+
+[Demo? Backbone app talking to FW/1 REST controller]
+
+Just a quick caveat with routes - in the current release version of FW/1 the routes are only simple matches, so /person/:id will match /person/1 and also /person/1/contacts - you can't get around this by doing /person/:id/contacts and /person/:id second - however in the latest HEAD version on Github there's some basic support for some additional regex support in routes like /person/:id$
+
+OK, so once your FW/1 applications start to get a little larger you might want to break them up into smaller components - either because you want to more easily re-use them in other applications, or they're aimed at different audiences - like say an admin system vs a public site. FW/1 allows you to do this with support for something called sub-systems.
+
+To turn on sub-systems in your application you need to add a config option variables.framework.usingSubsystems = true
+
+By turning sub-systems on it means that the way an action looks is slightly different. The default action is now
+
+default:default.main
+
+the first part is the name of the sub-system that handles that action.  As with everything else this is by convention, and the default sub-system is called default.
+
+So at the basic level, if you wanted to use sub-systems to split up your site into an "admin" and "public" sub-system you would end up with a folder structure like this:
+
+..
+
+As you can see each sub-system has it's own self-contained set of controllers and views - this means you could easily take this whole sub-system and drop it into another FW/1 application. Apart from the sub-system specific stuff there is a common layout folder.  This means the bubbling for layouts now becomes:
+
+subsystem/layouts/section/method
+subsystem/layouts/section
+subsystem/layouts/default.cfm
+common/layouts/default.cfm
+
+[Demo of basic Public / Admin system]
+
+In addition, if you are using Dependency Injection you can provide separate bean factories per sub-system, or just keep using a single bean factory. This means you can even separate your service components where they aren't common.
+
+[Demo of above with auth services moved to admin sub-system and new bean factory]
+
+So that's our tour of some of the more advanced features of FW/1 - by using all these features you can provide a cleaner structure to your CF applications, it becomes much easier to re-use code between your applications, and it keeps the different parts of the application logically separated.
+
+One last thing I'd like to discuss is testing of FW/1 applications.
+
+If you've done everything mostly right in terms of structuring your application to keep it loosely coupled then it will better lend itself to testing.
+
+The "standard" testing framework in the Coldfusion world is mxunit, so that's what I'll be using today.
+
+Now this something I recently had an aha! moment with after asking what in retrospect was a silly question on the FW/1 mailing list - when testing it's important to consider that you're testing YOUR code and not the Framework. This means that your tests should not have any dependencies on the framework being there or running, and any calls made to framework functions like populate or redirect should be stubbed and mocked.
+
+So at it's most basic to test a controller method you setup the request context with the required variables, call your controller function, and then inspect rc to assert that the values in rc are now what you expect them to be.
+
+However if your controller calls a service to get data, then these service calls should be mocked and the mock service injected into your controller.
+
+[Example]
+
+So what about testing your templates? This can be done with a similar approach - you setup a request context structure with the variables you'd expect to be in there and then include the template, saving the output.  This is functionally similar to what FW/1 does under the hood to render the output.
+
+[Example]
+
+You can then either do simple string matching to ensure that the data you expect is in the output, or you can use a library like JSoup to do more advanced matching. JSoup is a port of a python HTML parsing library called BeautifulSoup - after parsing the content it gives you a nice object you can do all sorts of queries on to get data out.
+
+[Example]
+
+OK, so where are we at? We've shown how FW/1 adds structure and separation to your application with it's implementation of Model-View-Controller. We've shown how you can use dependency injection to reduce coupling between components. We've talked about sub-systems and how they can be used to break an application into re-useable modules. We've covered routes which allow you to make "friendly" URLs and provide consistent APIs. And last but not least we've covered a little on testing FW/1 applications.
+
+I'll use some of the remaining time to show you a few useful tricks and tips you can do with FW/1 that didn't directly fit into the above.
+
+
+Small tips
+* producing JSON using onMissingMethod (TODO: move?)
+    * REST stuff with returning diff data types
+* populate
+* authorization with before
+
+
+
+Testing
+* mxunit
+* Testing Controllers
+* Testing Views (Functional - HTML matching?)
+* demo
+
+Resources
+* Github
+* Mailing list
+* Contribute!
