@@ -14,14 +14,23 @@
         /*
         COLDSPRING
         */
-        var beanFactory = new coldspring.beans.DefaultXmlBeanFactory().init();
+        var props = {
+            configString: "Coldspring Property Config String"
+        };
+        
+        var beanFactory = new coldspring.beans.DefaultXmlBeanFactory().init(defaultProperties=props);
         beanFactory.loadBeans("coldspring.xml");
         setBeanFactory(beanFactory);
 		
 		
 		/* 
 		DI/1
-	    var beanFactory = new ioc("./model");
+	    var beanFactory = new ioc("./model", {
+	        constants: {
+	            configString: "DI/1 Config String"
+	        }
+	    });
+	    
 	    beanFactory.addAlias("personDAO", "personStaticDAO");
 	    //beanFactory.addAlias("personDAO", "personSQLDAO");
 	    setBeanFactory(beanFactory);

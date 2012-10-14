@@ -5,5 +5,6 @@
     public void function default (required any rc)
 	{
 	   rc.qPeople = getPersonService().getPeople();
+	   rc.configString = getPersonService().getConfigString();
 	}
 }
