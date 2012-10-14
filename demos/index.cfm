@@ -6,6 +6,7 @@
     <body>
         <ul>
         	<li><a href="/minimal/">Minimal FW/1 Application</a></li>
+			<li><a href="/simple/">Simple FW/1 Application</a></li>
         </ul>
     </body>
 </html>

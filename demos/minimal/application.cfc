@@ -1,4 +1,4 @@
 ﻿component  extends="framework" output="false"
 {
-    this.name = "Simple FW/1 App";
+    this.name = "MinimalFW1";
 }
