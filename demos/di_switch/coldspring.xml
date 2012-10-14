@@ -1,0 +1,10 @@
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>    
+    <bean id="personSQLDAO" class="model.dao.personSQL" />
+    <bean id="personStaticDAO" class="model.dao.personStatic" />
+	
+	<bean id="personService" class="model.service.person">
+		<property name="personDAO"><ref bean="personStaticDAO" /></property>
+		<!--<property name="personDAO"><ref bean="personSQLDAO" /></property>-->
+	</bean>
+</beans>

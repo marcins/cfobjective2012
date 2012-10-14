@@ -1,7 +1,7 @@
 ﻿component  extends="framework" output="false"
 {
     this.name = "ColdspringDemo";
-    this.mappings["/coldspring"] = expandPath("./coldspring");
+    this.mappings["/coldspring"] = expandPath("../coldspring");
     
     variables.framework = {
         reloadApplicationOnEveryRequest: true
