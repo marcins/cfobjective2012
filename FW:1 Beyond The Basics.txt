@@ -218,6 +218,8 @@ common/layouts/default.cfm
 
 [Demo of basic Public / Admin system]
 
+
+
 In addition, if you are using Dependency Injection you can provide separate bean factories per sub-system, or just keep using a single bean factory. This means you can even separate your service components where they aren't common.
 
 [Demo of above with auth services moved to admin sub-system and new bean factory]
