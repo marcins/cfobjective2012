@@ -16,4 +16,12 @@
         var result = queryService.execute();
         return result.getResult();
     }
+    
+    public void function createPerson (required string name)
+    {
+        var queryService = new query();
+        queryService.setSQL("INSERT INTO people (name) VALUES (:name)");
+        queryService.addParam(name="name", value=arguments.name, cfsqltype="cf_sql_varchar");
+        var result = queryService.execute();
+    }
 }

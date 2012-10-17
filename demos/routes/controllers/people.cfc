@@ -20,8 +20,13 @@
             rc.contentType = "html";
         }
         
-        rc.qPerson = getPersonService().getPersonById(rc.id);       
+        var qPerson = getPersonService().getPersonById(rc.id);       
         
+        rc.person = {
+        	id: qPerson.id,
+        	name: qPerson.name
+        };
+		
         switch (rc.contentType)
         {
             case "html":
@@ -40,7 +45,30 @@
             variables.fw.setView("rest.json");
             break;
         }
-        
+    }
+    
+	public void function new (required any rc)
+	{
+		rc.person = {
+			id: 0,
+			name: ""
+		};
+	}
+	
+    public void function create (required any rc)
+    {
+    	param name="rc.name" type="string" default="";    	
+    	if (rc.name == "")
+    	{
+    		rc.error = "You must enter a name";
+    		variables.fw.redirect(action="people.new", preserve="error");
+    	}
+    	else
+    	{
+    		getPersonService().createPerson(rc.name);
+    		variables.fw.redirect(action="people");
+    	}
+		
     }
 
 }

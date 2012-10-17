@@ -13,4 +13,9 @@
         var qry = getPersonDAO().getPersonById(id);
         return qry;
     }
+    
+    public void function createPerson (required string name)
+    {
+    	getPersonDAO().createPerson(name);
+    }
 }
