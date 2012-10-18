@@ -1524,7 +1524,12 @@ component {
 		target &= chr(92) & n;
 		// end of preprocessing section
 		if ( !len( path ) || right( path, 1) != '/' ) path &= '/';
-		var matched = len( routeMatch.method ) ? ( '$' & CGI.REQUEST_METHOD == routeMatch.method ) : true;
+		var requestMethod = CGI.REQUEST_METHOD;
+		if (requestMethod == "POST" && structKeyExists(form, "_method") && ListFindNoCase("put,delete", form._method))
+		{
+			requestMethod = form._method;
+		}
+		var matched = len( routeMatch.method ) ? ( '$' & requestMethod == routeMatch.method ) : true;
 		if ( matched && reFind( route, path ) ) {
 			routeMatch.matched = true;
 			routeMatch.pattern = route;

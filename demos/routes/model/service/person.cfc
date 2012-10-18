@@ -18,4 +18,9 @@
     {
     	getPersonDAO().createPerson(name);
     }
+    
+    public void function updatePerson (required numeric id, required string name)
+    {
+    	getPersonDAO().updatePerson(id, name);
+    }
 }

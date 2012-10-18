@@ -11,13 +11,15 @@
         defaultItem: "list",
         routes: [
             {
-            	"$GET/people$" = "/people/index", 
+            	"$GET/$" = "302:/routes/index.cfm/people/",
+            	"$GET/people/$" = "/people/list", 
             	"$GET/people/new" = "/people/new", 
-            	"$POST/people" = "/people/create", 
+            	"$POST/people/$" = "/people/create", 
             	"$GET/people/(\d+)(\.(\w+))?/$" = "/people/show/id/\1/contentType/\3", 
             	"$GET/people/(\d+)/contacts(\.(\w+))?/$" = "/people/showContacts/person_id/\1/contentType/\3",
             	"$PUT/people/(\d+)?/$" = "/people/update/\1/", 
             	"$DELETE/people/:id" = "/people/destroy/:id/"
+            	
             }
         ]
     };

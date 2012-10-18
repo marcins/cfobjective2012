@@ -55,6 +55,20 @@
 		};
 	}
 	
+	public void function update (required any rc)
+	{
+		param name="rc.id" type="numeric" default="0";
+		param name="rc.name" type="string" default="";
+		
+		if (rc.id == 0)
+		{
+			throw(message="Invalid Person ID!");
+		}
+		
+		getPersonService().updatePerson(rc.id, rc.name);
+		variables.fw.redirect("people.list");
+	}
+	
     public void function create (required any rc)
     {
     	param name="rc.name" type="string" default="";    	

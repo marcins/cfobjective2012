@@ -1,12 +1,18 @@
-<cfif rc.person.id EQ 0>
-<form action="/routes/index.cfm/people" method="POST">
+<cfif rc.person.id EQ  0> 
+<cfset action = "/routes/index.cfm/people">
 <cfelse>
-<form action="/routes/index.cfm/people" method="PUT">
-</cfif>	
+<cfset action = "/routes/index.cfm/people/#rc.person.id#">
+</cfif>
+<cfoutput>
+<form action="#action#" method="POST">
 	<fieldset>
 		<label for="name">Name</label>
-		<input name="name" id="name" value="<cfoutput>#rc.person.name#</cfoutput>" />
-		<input type="hidden" name="id" value="<cfoutput>#rc.person.id#</cfoutput>" />
+		<input name="name" id="name" value="#rc.person.name#" />
+		<input type="hidden" name="id" value="#rc.person.id#" />
+		<cfif rc.person.id NEQ 0>
+			<input type="hidden" name="_method" value="PUT" />
+		</cfif>
 		<input type="submit" value="Save" />
 	</fieldset>
 </form>
+</cfoutput>
