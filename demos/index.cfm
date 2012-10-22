@@ -12,6 +12,7 @@
 			<li><a href="/di_switch/">DI Implementation Replacement</a></li>
 			<li><a href="/routes/">Routes</a></li>
 			<li><a href="/subsystems/">Sub-systems</a></li>
+			<li><a href="/testing/">Testing</a></li>
         </ul>
     </body>
 </html>

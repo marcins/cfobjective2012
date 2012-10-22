@@ -22,7 +22,7 @@
             	
             }
         ],
-        unhandledPaths: ["/tests"]
+        unhandledPaths: "/testing/tests/"
     };
     
     public void function setupApplication ()
