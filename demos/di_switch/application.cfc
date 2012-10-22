@@ -21,14 +21,22 @@
         var beanFactory = new coldspring.beans.DefaultXmlBeanFactory().init(defaultProperties=props);
         beanFactory.loadBeans("coldspring.xml");
         setBeanFactory(beanFactory);
+
+
+
+
+
 		
 		
 		/* 
 		DI/1
+		
+		var constants = {
+           configString: "DI/1 Config String"
+        };
+        		
 	    var beanFactory = new ioc("./model", {
-	        constants: {
-	            configString: "DI/1 Config String"
-	        }
+	        constants: constants
 	    });
 	    
 	    beanFactory.addAlias("personDAO", "personStaticDAO");

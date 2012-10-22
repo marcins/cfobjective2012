@@ -5,6 +5,7 @@
 	
 	<bean id="personService" class="model.service.person">
 		<constructor-arg name="configString"><value>${configString}</value></constructor-arg>
+		
 		<property name="personDAO"><ref bean="personStaticDAO" /></property>
 		<!--<property name="personDAO"><ref bean="personSQLDAO" /></property>-->
 	</bean>
