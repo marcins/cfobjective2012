@@ -21,6 +21,21 @@
 		assertIsQuery(rc.qPeople); 
 	}
 	
+	public void function testPersonValidate ()
+	{
+		var rc = {
+			person: {
+				id: 0	
+			}
+		};
+		
+		variables.fw.redirect("{string}", "{string}").returns();		
+		variables.controller.create(rc);
+		assertTrue(structKeyExists(rc, "error"), "Expected error in RC");
+		assertTrue(Len(rc.error) GT 0, "Expected an error message" );
+		variables.fw.verify(1).redirect("{string}", "{string}");		
+	}
+	
 	public void function testPersonShow ()
 	{
 		var rc = { id: 1 };

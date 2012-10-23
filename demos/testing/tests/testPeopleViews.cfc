@@ -5,18 +5,33 @@
 		
 	}
 	
+	private any function getSoup(required string html)
+	{
+		var JSoup = createObject("java", "org.jsoup.Jsoup");
+		var soup = JSoup.parse(html);
+		return soup;
+	}
+		
 	private string function buildUrl ()
 	{
 		return "";
 	}
 	
-	private string function getTemplateOutput (required string filename, required any rc)
+	private string function getTemplateOutput (required string filename, required any rc, boolean returnSoup = false)
 	{
 		var body = "";
 		savecontent variable="output" {
 			include filename;
 		}
-		return output;	
+		
+		if (returnSoup)
+		{
+			return getSoup(output);
+		}
+		else
+		{
+			return output;
+		}
 	}
 	
 	public void function testDefaultLayout (void)
@@ -38,7 +53,10 @@
 			])
 		};
 		var output = getTemplateOutput("../views/people/list.cfm", rc);
-		// TODO add JSoup test here
+
+		var soup = getSoup(output);
+		var listItems = soup.select("ul li");
+		assertEquals(2, arrayLen(listItems)); // ensure both people rendered
 	}
 	
 	public void function testEditForm (void)
@@ -50,19 +68,39 @@
 			},
 			edit: true
 		};
-		var output = getTemplateOutput("../views/people/show.cfm", rc);
-		// TODO check form action is correct
+
+		var soup = getTemplateOutput("../views/people/show.cfm", rc, true);
+		var elems = soup.select("form");
+		assertEquals(1, arrayLen(elems));
+		var elemForm = elems[1];
+		assertEquals("post", elemForm.attr("method"));
 		
+		elems = soup.select("input[name=_method]");
+		assertEquals(1, arrayLen(elems));
+		assertEquals("PUT", elems[1].attr("value"));		
 		
 		rc = {
-			person: {
-				id: 0
-			},
 			edit: true
 		};
 		
-		output = getTemplateOutput(getTemplateOutput("../layouts/default.cfm", rc);
-		// TODO check form action again
-		
+		soup = getTemplateOutput("../views/people/show.cfm", rc, true);
+		elems = soup.select("input[name=_method]");
+		assertEquals(0, arrayLen(elems));		
+	}
+	
+	public void function testValidationError (void)
+	{
+		var rc = {
+			error: "You must enter a name",
+			person: {
+				id: 0,
+				name: ""
+			},
+			edit: true
+		};
+		var soup = getTemplateOutput("../views/people/show.cfm", rc, true);
+		var elems = soup.select("p.error");
+		assertEquals(1, arrayLen(elems), "Expected a p.error element");
+		assertEquals(rc.error, elems[1].text());
 	}
 }
