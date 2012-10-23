@@ -39,8 +39,8 @@
             
             case "json":
             rc.json = serializeJSON({
-                id: rc.qPerson.id,
-                name: rc.qPerson.name
+                id: qPerson.id,
+                name: qPerson.name
             });
             variables.fw.setView("rest.json");
             break;
