@@ -1,4 +1,4 @@
-﻿component  extends="framework" output="false"
+﻿component extends="framework" output="false"
 {
     this.name = "MinimalFW1";
 }
