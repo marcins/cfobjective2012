@@ -33,7 +33,8 @@
 		variables.controller.create(rc);
 		assertTrue(structKeyExists(rc, "error"), "Expected error in RC");
 		assertTrue(Len(rc.error) GT 0, "Expected an error message" );
-		variables.fw.verify(1).redirect("{string}", "{string}");		
+		variables.fw.verify(1).redirect("{string}", "{string}");
+		variables.controller.getPersonService().verifyTimes(0).createPerson();		
 	}
 	
 	public void function testPersonShow ()
