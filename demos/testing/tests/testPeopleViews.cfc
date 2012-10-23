@@ -4,36 +4,7 @@
 	{
 		
 	}
-	
-	private any function getSoup(required string html)
-	{
-		var JSoup = createObject("java", "org.jsoup.Jsoup");
-		var soup = JSoup.parse(html);
-		return soup;
-	}
 		
-	private string function buildUrl ()
-	{
-		return "";
-	}
-	
-	private string function getTemplateOutput (required string filename, required any rc, boolean returnSoup = false)
-	{
-		var body = "";
-		savecontent variable="output" {
-			include filename;
-		}
-		
-		if (returnSoup)
-		{
-			return getSoup(output);
-		}
-		else
-		{
-			return output;
-		}
-	}
-	
 	public void function testDefaultLayout (void)
 	{
 		var rc = { isLoggedIn: false};
@@ -52,9 +23,7 @@
 				{id: 2, name: "Test 2"}
 			])
 		};
-		var output = getTemplateOutput("../views/people/list.cfm", rc);
-
-		var soup = getSoup(output);
+		var soup = getTemplateOutput("../views/people/list.cfm", rc, true);
 		var listItems = soup.select("ul li");
 		assertEquals(2, arrayLen(listItems)); // ensure both people rendered
 	}
@@ -103,4 +72,35 @@
 		assertEquals(1, arrayLen(elems), "Expected a p.error element");
 		assertEquals(rc.error, elems[1].text());
 	}
+			
+	private string function buildUrl ()
+	{
+		return "";
+	}
+	
+	private string function getTemplateOutput (required string filename, required any rc, boolean returnSoup = false)
+	{
+		var body = "";
+		savecontent variable="output" {
+			include filename;
+		}
+		
+		if (returnSoup)
+		{
+			return getSoup(output);
+		}
+		else
+		{
+			return output;
+		}
+	}
+	
+	private any function getSoup(required string html)
+	{
+		var JSoup = createObject("java", "org.jsoup.Jsoup");
+		var soup = JSoup.parse(html);
+		return soup;
+	}
+
+
 }
