@@ -15,7 +15,7 @@
     
     public void function show (required any rc)
     {
-        if (rc.contentType == "")
+        if (!structKeyExists(rc, "contentType") || rc.contentType == "")
         {
             rc.contentType = "html";
         }
