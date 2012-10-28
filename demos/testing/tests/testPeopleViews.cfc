@@ -7,12 +7,13 @@
 		
 	public void function testDefaultLayout (void)
 	{
-		var rc = { isLoggedIn: false};
+		var rc = { isLoggedIn: false };
 		var output = getTemplateOutput("../layouts/default.cfm", rc);
 		assertTrue(output contains "Login", "Should contain login link when not logged in");
 		rc.isLoggedIn = true;
 		output = getTemplateOutput("../layouts/default.cfm", rc);
 		assertTrue(output contains "Logout", "Should contain logout link when logged in");
+		assertTrue(output contains "!BODY!", "Should render body");
 	}
 	
 	public void function testPersonList (void)
@@ -80,7 +81,7 @@
 	
 	private string function getTemplateOutput (required string filename, required any rc, boolean returnSoup = false)
 	{
-		var body = "";
+		var body = "!BODY!";
 		savecontent variable="output" {
 			include filename;
 		}
