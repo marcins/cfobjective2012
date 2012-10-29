@@ -16,7 +16,16 @@
             writeLog(text="Adding bean factory for #subsystem#");
 	        var subSystemBeanFactory = new ioc(subsystem & "/model");
 	        subSystemBeanFactory.setParent(getDefaultBeanFactory());
-	        setSubsystemBeanFactory(subsystem, subSystemBeanFactory);            
+	        setSubsystemBeanFactory(subsystem, subSystemBeanFactory);
+	        
+	        if (subsystem == "admin")
+	        {
+	        	subSystemBeanFactory.addAlias("personDAO", "personStaticDAO");
+	        }
+        }
+        else
+        {
+        	writeLog(text="#expandPath(subsystem & "/model")# doesn't exist");
         }
     }
     
