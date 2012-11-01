@@ -43,7 +43,7 @@
 		var elems = soup.select("form");
 		assertEquals(1, arrayLen(elems));
 		var elemForm = elems[1];
-		assertEquals("post", elemForm.attr("method"));
+		assertEquals("post", elemForm.attr("method"), "Form method should be POST");
 		
 		elems = soup.select("input[name=_method]");
 		assertEquals(1, arrayLen(elems));
